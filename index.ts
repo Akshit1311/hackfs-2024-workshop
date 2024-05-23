@@ -7,7 +7,7 @@ import { getResponseFromGpt } from "./utils/textGen";
 import { createAccessToken } from "./token";
 import { textToSpeech } from "./utils/textToSpeech";
 
-// const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const worker = await createWorker({
   logLevel: "debug",
@@ -31,7 +31,7 @@ const client = new HuddleClient({
   },
 });
 
-const roomId = "eeu-lxzl-vlk"; //TODO: Add your room id here
+const roomId = "jhs-fhqa-uuc"; //TODO: Add your room id here
 
 const token = await createAccessToken(roomId);
 
@@ -39,6 +39,8 @@ await client.joinRoom({
   roomId,
   token,
 });
+
+await sleep(1000 * 5);
 
 client.room.on("room-joined", async () => {
   console.log("Room Joined");
@@ -53,7 +55,7 @@ client.localPeer.on("receive-data", async (data) => {
   if (!isBot) {
     await client.localPeer.disableVideo();
 
-    client.localPeer.sendData({
+    return client.localPeer.sendData({
       to: "*",
       payload: "processing reply ...",
       label: "chat",
@@ -80,6 +82,13 @@ client.localPeer.on("receive-data", async (data) => {
         url: filepath,
       },
     });
+
+    const audio = new AiortcMediaStream([audioStream.getAudioTracks()[0]]);
+
+    await client.localPeer.disableAudio();
+    await client.localPeer.enableAudio(audio as any);
+    // await client.localPeer.replaceAudioStream(audio as any);
+
     const videoStream = await worker.getUserMedia({
       video: {
         source: "url",
@@ -88,14 +97,8 @@ client.localPeer.on("receive-data", async (data) => {
       },
     });
 
-    const audio = new AiortcMediaStream([audioStream.getAudioTracks()[0]]);
     const video = new AiortcMediaStream([videoStream.getVideoTracks()[0]]);
     await client.localPeer.enableVideo(video as any);
-
-    // await sleep(1000 * 3);
-
-    await client.localPeer.disableAudio();
-    await client.localPeer.enableAudio(audio as any);
   } catch (error) {
     console.log({ error });
   }
@@ -105,13 +108,24 @@ client.localPeer.on("receive-data", async (data) => {
 
 // await sleep(1000 * 3);
 
+// AUDIO Stream Produce
 const speechPath = path.join(__dirname, "speech.mp3");
 
-const streams = await worker.getUserMedia({
+const audioStream = await worker.getUserMedia({
   audio: {
     source: "url",
     url: speechPath,
   },
+});
+
+const audioTrack = audioStream.getAudioTracks()[0];
+
+const audio = new AiortcMediaStream([audioTrack]);
+
+await client.localPeer.enableAudio(audio as any);
+
+// VIDEO Stream Produce
+const videoStream = await worker.getUserMedia({
   video: {
     source: "url",
     loop: true,
@@ -119,15 +133,7 @@ const streams = await worker.getUserMedia({
   },
 });
 
-const audioTrack = streams.getAudioTracks()[0];
-const videoTrack = streams.getVideoTracks()[0];
+const videoTrack = videoStream.getVideoTracks()[0];
+const video = new AiortcMediaStream([videoTrack]);
 
-console.log({ audioTrack: audioTrack.id, videoTrack: videoTrack.id });
-
-const audio = new AiortcMediaStream([streams.getAudioTracks()[0]]);
-const video = new AiortcMediaStream([streams.getVideoTracks()[0]]);
-
-// await sleep(1000 * 5);
-
-await client.localPeer.enableAudio(audio as any);
 await client.localPeer.enableVideo(video as any);

@@ -9,6 +9,9 @@
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
+  "scripts": {
+    "dev": "bun run index.ts"
+  },
   "dependencies": {
     "@huddle01/server-sdk": "^2.2.2",
     "@huddle01/web-core": "^2.0.13-alpha.0",
